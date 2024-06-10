@@ -4,38 +4,39 @@ class Node:
     def __init__(self, streets):
         self.streets = streets
 
-    def __eq__(self, other):
-        # shit, I don't think I should be implementing this
-        pass
-
-    def choicesAt(self, t):
-        "Next steps in the form (street, trafficSignal)"
-        return [(s, s.signalAt(t)) for s in self.streets]
+    def accept(self, walker):
+        walker.setChoices(self.streets)
 
 
 class Walker:
     "A person walking the grid"
 
-    def __init__(self, watch, strategy, startNode, goalNode):
-        self.watch = watch
+    def __init__(self, strategy, startNode):
+        self.now = 0          # should use stdlib
         self.strategy = strategy
-        self.node = startNode
-        self.goalNode = goalNode
+        self.choices = []
+        startNode.accept(self)
+
+    def walkTo(self, nextNode, walkTime):
+        self.now += walkTime
+        nextNode.accept(self)
+
+    def setChoices(self, choices):
+        self.choices = choices
 
     def walk(self):
-        while self.node != self.goalNode:
-            now = self.watch.checkTime()
-            street = self.strategy.choose(self.node.choicesAt(now))
-            self.watch.advance(street.walkTimeAt(atTime))
-            self.node = street.getNextNode()
+        if self.choices:
+            street = self.strategy.choose(self.choices, self.now)
+            street.acceptAt(self, self.now)
 
 class Strategy:
     "An algo for a Walker to use at a Node"
 
     @staticmethod
-    def choose(choices):
+    def choose(choices, t):
         "Default implementation is just take a green when you can"
-        for street, signal in choices:
+        for street in choices:
+            signal = street.getTrafficSignal.at(t)
             if signal == "green":
                 return street
             else:
@@ -47,15 +48,16 @@ class Street:
     "A path to a Node"
 
     def __init__(self, trafficSignal, nextNode):
+        self.walkTime = 100
         self.trafficSignal = trafficSignal
         self.nextNode = nextNode
 
-    def signalAt(self, t):
-        "Whether the light is red or green"
-        return self.trafficSignal.at(t)
+    def getTrafficSignal(self):
+        return self.trafficSignal
 
-    def walkTimeAt(self, t):
-        return 100 + self.trafficSignal.timeRemaining(t)
+    def acceptAt(self, walker, time):
+        totalTime = self.walkTime + self.trafficSignal.timeRemainingAt(time)
+        walker.walkTo(self.nextNode, totalTime)
 
 
 class TrafficSignal:
@@ -68,22 +70,9 @@ class TrafficSignal:
 
     def at(self, t):
         "What color is it now?"
-        return "green" if self.timeRemaining() == 0 else "red"
+        return "green" if self.timeRemainingAt(t) == 0 else "red"
 
-    def timeRemaining(self, t):
+    def timeRemainingAt(self, t):
         "Time left to the next green, or 0 if currently green"
         normalized = (t + self.offset) % self.period
         return min(self.redTime - normalized, 0)
-
-
-class Watch:
-    "Just a timer, I should probably use a stdlib"
-
-    def __init__(self):
-        self.now = 0
-
-    def checkTime(self):
-        return self.now
-
-    def advance(self, amount):
-        self.now += amount
