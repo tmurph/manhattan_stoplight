@@ -3,14 +3,14 @@ from manstop.model import Node, Street, FixedSignalFactory
 def fromFile(f):
     "Something that can parse a file would be nice"
 
-def fromCoordinates(x, y):
+def fromCoordinates(x, y, writer):
     "Wire up a default grid sized X streets by Y streets"
     default_walktime = 100
     default_lighttime = 130
 
     traffic_signal_factory = FixedSignalFactory(default_lighttime, 0)
 
-    all_nodes = [[Node(traffic_signal_factory, f"({i}, {j})") for j in range(y)] for i in range(x)]
+    all_nodes = [[Node(traffic_signal_factory, f"({i}, {j})", writer) for j in range(y)] for i in range(x)]
     for i in range(x):
         for j in range(y):
             if i + 1 < x:

@@ -4,7 +4,7 @@ from random import randrange
 class Node:
     "An intersection in the grid"
 
-    def __init__(self, trafficSignalFactory, name):
+    def __init__(self, trafficSignalFactory, name, writer):
         self.trafficSignalFactory = trafficSignalFactory
         self.name = name
         self.streets = []
@@ -16,76 +16,53 @@ class Node:
         self.streets.extend(streets)
 
     def accept(self, walker):
-        print(f"reached Node {self.name}")
-        walker.setStreets(self.streets)
-        walker.setTrafficSignalFactory(self.trafficSignalFactory)
+        self.writer.reachedNode(self.name)
+        walker.choose(self.streets, self.trafficSignalFactory)
 
 class Walker:
     "A person walking the grid"
 
-    def __init__(self, strategy, startNode):
+    def __init__(self, writer):
         self.now = 0          # should use stdlib
-        self.strategy = strategy
-        self.streets = []
-        self.trafficSignalFactory = None
+        self.writer = writer
+
+    def choose(self, streets, trafficSignalFactory):
+        self.writer.choosingAt(self.now)
+        if streets:
+            trafficSignal = trafficSignalFactory.createAt(self.now)
+            foundStreet = None
+            for street in streets:
+                foundStreet = street
+                signal = trafficSignal.getStatus(street.getOrientation())
+                if signal == "green":
+                    break
+            street.accept(self, trafficSignal)
+        else:
+            self.writer.doneAt(self.now)
+
+    def walk(self, startNode):
         startNode.accept(self)
-
-    def setStreets(self, streets):
-        self.streets = streets
-
-    def setTrafficSignalFactory(self, trafficSignalFactory):
-        self.trafficSignalFactory = trafficSignalFactory
-
-    def cross(self, street, trafficSignal):
-        "How much time it takes the WALKER to cross"
-        self.now += street.getWalkTime()
-        self.now += trafficSignal.getDelay(street.getOrientation())
-        print(f"crossed, now it is {self.now}")
-
-    def walk(self):
-        while self.streets:
-            print(f"wondering where to go at {self.now}")
-            trafficSignal = self.trafficSignalFactory.createAt(self.now)
-            street = self.strategy.choose(self.streets, trafficSignal)
-            print(f"heading {street.getOrientation()}")
-            print(f"the signal is {trafficSignal.getStatus(street.getOrientation())}")
-            self.cross(street, trafficSignal)
-            street.accept(self)
-        print(f"done!  it is now {self.now}")
-
-class Strategy:
-    "An algo for a Walker to use at a Node"
-
-    @staticmethod
-    def choose(streets, trafficSignal):
-        "Default implementation is just take a green when you can"
-        for street in streets:
-            signal = trafficSignal.getStatus(street.getOrientation())
-            if signal == "green":
-                return street
-            else:
-                lastRed = street
-        return lastRed
 
 
 class Street:
     "A path to a Node"
 
-    def __init__(self, orientation, walkTime, nextNode, name):
+    def __init__(self, orientation, walkTime, nextNode, name, writer):
         self.orientation = orientation
         self.walkTime = walkTime
         self.nextNode = nextNode
         self.name = name
-
-    def getWalkTime(self):
-        return self.walkTime
+        self.writer = writer
 
     def getOrientation(self):
         "NESW"
         return self.orientation
 
-    def accept(self, walker):
-        print(f"reached Street {self.name}")
+    def accept(self, walker, trafficSignal):
+        self.writer.reachedStreet(self.name)
+        self.writer.crossing(self.orientation, trafficSignal)
+        walker.advance(self.walkTime)
+        walker.advance(trafficSignal.getDelay(self.orientation))
         self.nextNode.accept(walker)
 
 
