@@ -6,26 +6,25 @@ I like the stateFn approach, but let's try a big closure to share the timer.
 # special at the end of the run
 DONE = None
 
-def first_green(traffic_signal):
+def first_green(choices):
     "Just pick the first green direction, or the last red"
-    # directions are maybe a tuple like (orientation, status, delay, street)
+    # choices is a dict of tuples like {orientation: (status, delay, street)}
     last_direction = None
-    for direction in traffic_signal:
+    for _, direction in enumerate(choices):
         last_direction = direction
         if direction.status == "green":
             break
     return last_direction
 
-def create_walker(initial_node, choice_fn):
+def create_walker(initial_node, choice_fn, writer):
     "Wire everything up together"
     now = 0                     # still should use stdlib
 
     def node_state_fn(node):
         writer.visit(node)
         def inner():
-            traffic_signal = node.trafficSignalFactory.createAt(now)
-            if traffic_signal.streets:
-                return choice_state_fn(traffic_signal)
+            if (choices := node.traffic_signal_at(now)):
+                return choice_state_fn(choices)
             else:
                 return done_state_fn()
         return inner

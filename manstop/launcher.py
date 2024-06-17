@@ -1,12 +1,10 @@
 from manstop.grid import fromCoordinates
 from manstop.model import Strategy, Walker
-from manstop.output import ProgressWriter
+from manstop.states import create_walker, first_green
 
 def main():
-    writer = ProgressWriter()
-    strategy = Strategy()
-    myDude = Walker(strategy, writer)
-    startNode = fromCoordinates(2, 3, writer)
+    start_node = fromCoordinates(2, 3, writer)
+    walker = create_walker(start_node, first_green)
 
     myDude.walk(startNode)
 
